@@ -4,15 +4,19 @@ package com.pera.sira;
  * Created by Ishan Madhusanka on 11/07/2015.
  */
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
 import android.util.Log;
 import android.widget.Toast;
-
 
 public class SmsReceiver extends BroadcastReceiver {
 
@@ -20,6 +24,7 @@ public class SmsReceiver extends BroadcastReceiver {
     private String txtPhoneNo = "678";
     private String txtMessage = "MBB";
     private String city;
+
     @Override
     public void onReceive(Context context, Intent intent) {
         Bundle pudsBundle = intent.getExtras();
@@ -29,6 +34,10 @@ public class SmsReceiver extends BroadcastReceiver {
         String messageTxt = messages.getMessageBody();
         StringFinder sf=new StringFinder();
         String replyTxt = sf.find(messages.getMessageBody().toString());
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
+        PendingIntent pIntent = PendingIntent.getActivity(context, 0, intent, 0);
+        int ifSiRATurnedOn = sharedPref.getInt(context.getResources().getString(R.string.turned_on), 1);
+
 // check if GPS enabled
 //        GPSTracker gpsTracker = new GPSTracker(context);
 //
@@ -68,19 +77,31 @@ public class SmsReceiver extends BroadcastReceiver {
 //            abortBroadcast();
 //            Toast.makeText(context, messages.getMessageBody(),
 //                    Toast.LENGTH_LONG).show();
-//        }
-       sendSMSMessage(messages.getOriginatingAddress(), replyTxt, context);
+//        }s
 
 
+        if (ifSiRATurnedOn == 1) {
+            sendSMSMessage(messages.getOriginatingAddress(), replyTxt, context);
+            Notification n  = new Notification.Builder(context)
+                   .setContentTitle("I had to reply!")
+                   .setContentText(replyTxt)
+                   .setContentIntent(pIntent)
+                   .setAutoCancel(false).build();
 
-        Toast.makeText(context, replyTxt, Toast.LENGTH_LONG).show();
+
+           NotificationManager notificationManager =
+                   (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+
+           notificationManager.notify(0, n);
+       } else {
+            Toast.makeText(context, "I should've said " + replyTxt, Toast.LENGTH_LONG).show();
+        }
     }
-    protected void sendSMSMessage(String txtPhoneNo, String txtMessage, Context context) {
+    public static void sendSMSMessage(String txtPhoneNo, String txtMessage, Context context) {
         Log.i("Send SMS", "");
         Log.d(TAG, txtPhoneNo);
         String phoneNo = txtPhoneNo.toString();
         String message = txtMessage.toString();
-
 
 
         try {
